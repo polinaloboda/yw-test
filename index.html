@@ -931,7 +931,8 @@
             // Calculate total height and starting Y to center vertically
             const lineHeight = fontSize + 20;
             const totalHeight = tempLines.length * lineHeight;
-            let y = (canvas.height - totalHeight) / 2 + fontSize / 2;
+            const topPadding = 50; // Add padding at top
+            let y = Math.max(topPadding + fontSize / 2, (canvas.height - totalHeight) / 2 + fontSize / 2);
             
             // Second pass: create lines with correct Y positions
             const lines = tempLines.map(lineText => {
