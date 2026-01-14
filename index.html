@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Send a Message to Space</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #ui-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        #title {
+            display: none;
+        }
+
+        #message-form {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 20, 40, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            pointer-events: all;
+            width: 450px;
+            max-width: 450px;
+            transition: opacity 0.3s, transform 0.3s;
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        #message-form.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(-50%) translateY(20px);
+            display: none;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #00ffff;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            color: #fff;
+            transform: rotate(90deg);
+        }
+
+        #add-wish-btn {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #00ffff, #0088ff);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            pointer-events: all;
+            transition: all 0.3s;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #add-wish-btn.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        #add-wish-btn:hover {
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 0 30px #00ffff;
+        }
+
+        #message-form h2 {
+            color: #00ffff;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #00ffff;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #00ffff;
+            border-radius: 5px;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            box-shadow: 0 0 10px #00ffff;
+        }
+
+        #mood-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .mood-btn {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            pointer-events: all;
+        }
+
+        .mood-btn.hope {
+            border-color: #00ffff;
+        }
+
+        .mood-btn.love {
+            border-color: #ff00ff;
+        }
+
+        .mood-btn.dream {
+            border-color: #ffff00;
+        }
+
+        .mood-btn.gratitude {
+            border-color: #00ff00;
+        }
+
+        .mood-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .mood-btn.active {
+            box-shadow: 0 0 20px currentColor;
+        }
+
+        .mood-btn.hope.active {
+            box-shadow: 0 0 20px #00ffff;
+        }
+
+        .mood-btn.love.active {
+            box-shadow: 0 0 20px #ff00ff;
+        }
+
+        .mood-btn.dream.active {
+            box-shadow: 0 0 20px #ffff00;
+        }
+
+        .mood-btn.gratitude.active {
+            box-shadow: 0 0 20px #00ff00;
+        }
+
+        #send-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #00ffff, #0088ff);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+            pointer-events: all;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        #send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px #00ffff;
+        }
+
+        #filter-container {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: all;
+            width: auto;
+            max-width: 90%;
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        #filter-wrapper {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        #filter-container label {
+            display: block;
+            color: #00ffff;
+            font-size: 11px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        #country-filter {
+            padding: 12px 20px;
+            background: rgba(0, 20, 40, 0.95);
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            color: #00ffff;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            font-size: 13px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            height: 48px;
+            min-width: auto;
+            width: auto;
+        }
+
+        #country-filter:focus {
+            outline: none;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
+        }
+        
+        /* ===== CUSTOM SELECT ARROW FIX ака Залупа Лягушки ===== */
+        
+        #filter-wrapper {
+  position: relative;
+}
+
+#country-filter {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 40px; /*fiksirovannoye mesto dlya strelochki*/
+}
+
+#filter-wrapper {
+  position: relative;
+}
+
+#filter-wrapper::after {
+  content: "▾";
+  position: absolute;
+  right: 15px;
+
+  /* tuta */
+  bottom: 15px;
+
+  color: #00ffff;
+  font-size: 14px;
+  pointer-events: none;
+  text-shadow: 0 0 6px rgba(0,255,255,0.8);
+  line-height: 1;
+}
+
+#country-filter:focus {
+  outline: none;
+}
+
+
+        #prediction-btn {
+            padding: 12px 20px;
+            background: transparent;
+            border: 2px solid #ff00ff;
+            border-radius: 8px;
+            color: #ff00ff;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.8);
+            white-space: nowrap;
+            flex-shrink: 0;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 15px rgba(255, 0, 255, 1);
+        }
+
+        #prediction-btn:hover {
+            background: rgba(255, 0, 255, 0.15);
+            box-shadow: 0 0 30px rgba(255, 0, 255, 1);
+            color: #ff88ff;
+            text-shadow: 0 0 20px rgba(255, 136, 255, 1);
+            border-color: #ff88ff;
+            transform: scale(1.05);
+        }
+
+        #wish-counter {
+            padding: 12px 20px;
+            background: rgba(0, 100, 100, 0.3);
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            color: #00ffff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+            white-space: nowrap;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 48px;
+        }
+
+        .char-counter {
+            text-align: right;
+            font-size: 12px;
+            color: #00ffff;
+            margin-top: 5px;
+        }
+
+        .message-tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid;
+            pointer-events: none;
+            font-size: 14px;
+            max-width: 300px;
+            z-index: 1000;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        /* MOBILE OPTIMIZATIONS */
+        @media (max-width: 768px) {
+            #filter-container {
+                gap: 8px;
+                max-width: 95%;
+            }
+
+            #prediction-btn {
+                font-size: 11px;
+                padding: 10px 15px;
+                height: 44px;
+                box-shadow: 0 0 20px rgba(255, 0, 255, 0.8);
+            }
+
+            #wish-counter {
+                font-size: 13px;
+                padding: 10px 15px;
+                height: 44px;
+            }
+
+            #country-filter {
+                font-size: 12px;
+                padding: 10px 15px;
+                height: 44px;
+            }
+
+            #filter-container label {
+                font-size: 9px;
+                margin-bottom: 3px;
+            }
+
+            #message-form {
+                min-width: unset;
+                width: 90vw;
+                padding: 20px;
+                bottom: 20px;
+            }
+
+            #add-wish-btn {
+                bottom: 20px;
+                font-size: 14px;
+                padding: 12px 24px;
+            }
+
+            .mood-btn {
+                font-size: 12px;
+                padding: 10px;
+            }
+
+            #send-btn {
+                font-size: 14px;
+                padding: 12px;
+            }
+
+            .message-tooltip {
+                font-size: 12px;
+                padding: 12px;
+                max-width: 200px;
+            }
+        }
+
+        /* Small phones (iPhone SE, 12/13 mini) - до 380px */
+        @media (max-width: 380px) {
+            #filter-container {
+                gap: 5px;
+                max-width: 98%;
+            }
+
+            #prediction-btn {
+                font-size: 9px;
+                padding: 8px 10px;
+                height: 38px;
+                min-width: 80px;
+                letter-spacing: 0.5px;
+            }
+
+            #wish-counter {
+                font-size: 11px;
+                padding: 8px 10px;
+                height: 38px;
+                min-width: 60px;
+            }
+
+            #country-filter {
+                font-size: 10px;
+                padding: 8px 10px;
+                height: 38px;
+            }
+
+            #filter-container label {
+                font-size: 8px;
+                margin-bottom: 2px;
+            }
+        }
+
+        /* Medium phones (iPhone 12/13/14 standard) - 381-430px */
+        @media (min-width: 381px) and (max-width: 430px) {
+            #prediction-btn {
+                font-size: 10px;
+                padding: 9px 13px;
+            }
+
+            #wish-counter {
+                font-size: 12px;
+                padding: 9px 13px;
+            }
+
+            #country-filter {
+                font-size: 11px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #message-form {
+                width: 95vw;
+                padding: 15px;
+            }
+
+            #mood-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+                height: 40px;
+            }
+
+            #country-filter {
+                font-size: 11px;
+                padding: 8px 12px;
+                height: 40px;
+            }
+
+            #filter-container label {
+                font-size: 8px;
+                margin-bottom: 2px;
+            }
+
+            #message-form {
+                min-width: unset;
+                width: 90vw;
+                padding: 20px;
+                bottom: 20px;
+            }
+
+            #add-wish-btn {
+                bottom: 20px;
+                font-size: 14px;
+                padding: 12px 24px;
+            }
+
+            .mood-btn {
+                font-size: 12px;
+                padding: 10px;
+            }
+
+            #send-btn {
+                font-size: 14px;
+                padding: 12px;
+            }
+
+            .message-tooltip {
+                font-size: 12px;
+                padding: 12px;
+                max-width: 200px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #prediction-btn {
+                font-size: 16px;
+                padding: 8px 10px;
+            }
+
+            #wish-counter {
+                font-size: 11px;
+                padding: 8px 10px;
+            }
+
+            #message-form {
+                width: 95vw;
+                padding: 15px;
+            }
+
+            #mood-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    
+/* ===== UNIVERSAL MOBILE LAYOUT ENGINE ===== */
+@media (max-width: 520px) {
+  :root { --ui-scale: clamp(0.85, 100vw / 420, 1); }
+  body { overflow-x: hidden; }
+  #ui-container { transform: scale(var(--ui-scale)); transform-origin: top center; }
+  #filter-container { width:96vw; left:50%; transform:translateX(-50%); flex-wrap:wrap; justify-content:center; gap:.6rem; }
+  #prediction-btn,#country-filter,#wish-counter { height:42px; padding:0 .9rem; font-size:.75rem; white-space:nowrap; }
+  #message-form { width:95vw; bottom: env(safe-area-inset-bottom, 12px); }
+  #add-wish-btn { bottom: env(safe-area-inset-bottom, 12px); }
+  canvas { width:100vw!important; height:100vh!important; }
+}
+
+</style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div id="ui-container">
+        <div id="filter-container">
+            <button id="prediction-btn" title="Get your daily prediction">Prediction</button>
+            
+            <div id="filter-wrapper">
+                <label for="country-filter"> </label>
+                <select id="country-filter">
+                <option value="all">ALL COUNTRIES</option>
+                <option value="Albania">Albania</option>
+                <option value="Andorra">Andorra</option>
+                <option value="Austria">Austria</option>
+                <option value="Belgium">Belgium</option>
+                <option value="Bosnia and Herzegovina">Bosnia and Herzegovina</option>
+                <option value="Bulgaria">Bulgaria</option>
+                <option value="Croatia">Croatia</option>
+                <option value="Cyprus">Cyprus</option>
+                <option value="Czech Republic">Czech Republic</option>
+                <option value="Denmark">Denmark</option>
+                <option value="Estonia">Estonia</option>
+                <option value="Finland">Finland</option>
+                <option value="France">France</option>
+                <option value="Germany">Germany</option>
+                <option value="Greece">Greece</option>
+                <option value="Hungary">Hungary</option>
+                <option value="Iceland">Iceland</option>
+                <option value="Ireland">Ireland</option>
+                <option value="Italy">Italy</option>
+                <option value="Kosovo">Kosovo</option>
+                <option value="Latvia">Latvia</option>
+                <option value="Liechtenstein">Liechtenstein</option>
+                <option value="Lithuania">Lithuania</option>
+                <option value="Luxembourg">Luxembourg</option>
+                <option value="Malta">Malta</option>
+                <option value="Moldova">Moldova</option>
+                <option value="Monaco">Monaco</option>
+                <option value="Montenegro">Montenegro</option>
+                <option value="Netherlands">Netherlands</option>
+                <option value="North Macedonia">North Macedonia</option>
+                <option value="Norway">Norway</option>
+                <option value="Poland">Poland</option>
+                <option value="Portugal">Portugal</option>
+                <option value="Romania">Romania</option>
+                <option value="San Marino">San Marino</option>
+                <option value="Serbia">Serbia</option>
+                <option value="Slovakia">Slovakia</option>
+                <option value="Slovenia">Slovenia</option>
+                <option value="Spain">Spain</option>
+                <option value="Sweden">Sweden</option>
+                <option value="Switzerland">Switzerland</option>
+                <option value="Ukraine">Ukraine</option>
+                <option value="United Kingdom">United Kingdom</option>
+                <option value="Vatican City">Vatican City</option>
+            </select>
+            </div>
+            
+            <div id="wish-counter">💫 0</div>
+        </div>
+
+        <button id="add-wish-btn">✨ ADD YOUR WISH</button>
+
+        <form id="message-form">
+            <button type="button" class="close-btn">×</button>
+            <h2>✨ Send Your Wish ✨</h2>
+            
+            <div class="form-group">
+                <label for="message-input">Your Message:</label>
+                <input type="text" id="message-text" maxlength="100" placeholder="Write your wish to the universe...">
+                <div class="char-counter"><span id="char-counter">0</span>/100</div>
+            </div>
+
+            <div class="form-group">
+                <label>Choose your mood:</label>
+                <div id="mood-buttons">
+                    <button type="button" class="mood-btn hope" data-mood="hope">💙 Hope</button>
+                    <button type="button" class="mood-btn love" data-mood="love">💗 Love</button>
+                    <button type="button" class="mood-btn dream" data-mood="dream">⭐ Dream</button>
+                    <button type="button" class="mood-btn gratitude" data-mood="gratitude">🌿 Gratitude</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="country-select">Your Country:</label>
+                <select id="country-select" required>
+                    <option value="">Select your country...</option>
+                    <option value="Albania">Albania</option>
+                    <option value="Andorra">Andorra</option>
+                    <option value="Austria">Austria</option>
+                    <option value="Belgium">Belgium</option>
+                    <option value="Bosnia and Herzegovina">Bosnia and Herzegovina</option>
+                    <option value="Bulgaria">Bulgaria</option>
+                    <option value="Croatia">Croatia</option>
+                    <option value="Cyprus">Cyprus</option>
+                    <option value="Czech Republic">Czech Republic</option>
+                    <option value="Denmark">Denmark</option>
+                    <option value="Estonia">Estonia</option>
+                    <option value="Finland">Finland</option>
+                    <option value="France">France</option>
+                    <option value="Germany">Germany</option>
+                    <option value="Greece">Greece</option>
+                    <option value="Hungary">Hungary</option>
+                    <option value="Iceland">Iceland</option>
+                    <option value="Ireland">Ireland</option>
+                    <option value="Italy">Italy</option>
+                    <option value="Kosovo">Kosovo</option>
+                    <option value="Latvia">Latvia</option>
+                    <option value="Liechtenstein">Liechtenstein</option>
+                    <option value="Lithuania">Lithuania</option>
+                    <option value="Luxembourg">Luxembourg</option>
+                    <option value="Malta">Malta</option>
+                    <option value="Moldova">Moldova</option>
+                    <option value="Monaco">Monaco</option>
+                    <option value="Montenegro">Montenegro</option>
+                    <option value="Netherlands">Netherlands</option>
+                    <option value="North Macedonia">North Macedonia</option>
+                    <option value="Norway">Norway</option>
+                    <option value="Poland">Poland</option>
+                    <option value="Portugal">Portugal</option>
+                    <option value="Romania">Romania</option>
+                    <option value="San Marino">San Marino</option>
+                    <option value="Serbia">Serbia</option>
+                    <option value="Slovakia">Slovakia</option>
+                    <option value="Slovenia">Slovenia</option>
+                    <option value="Spain">Spain</option>
+                    <option value="Sweden">Sweden</option>
+                    <option value="Switzerland">Switzerland</option>
+                    <option value="Ukraine">Ukraine</option>
+                    <option value="United Kingdom">United Kingdom</option>
+                    <option value="Vatican City">Vatican City</option>
+                </select>
+            </div>
+
+            <button type="button" id="send-btn">Send to Space</button>
+        </form>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        camera.position.z = 50;
+
+        // Starfield
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.7 });
+        const starsVertices = [];
+        for (let i = 0; i < 3000; i++) {
+            const x = (Math.random() - 0.5) * 2000;
+            const y = (Math.random() - 0.5) * 2000;
+            const z = (Math.random() - 0.5) * 2000;
+            starsVertices.push(x, y, z);
+        }
+        starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+        const stars = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(stars);
+
+        // Planets with rings (Saturn style)
+        const isMobile = window.innerWidth < 768;
+        const planetScale = isMobile ? 0.8 : 1;
+
+        const planetGeometry = new THREE.SphereGeometry(4 * planetScale, 32, 32);
+        
+        const planet1Material = new THREE.MeshBasicMaterial({
+            color: 0x4169e1,
+            wireframe: false
+        });
+        const planet1 = new THREE.Mesh(planetGeometry, planet1Material);
+        planet1.position.set(-25, 8, -40);
+        scene.add(planet1);
+
+        // Add ring to planet 1 (Saturn style)
+        const ringGeometry1 = new THREE.RingGeometry(5 * planetScale, 7 * planetScale, 32);
+        const ringMaterial1 = new THREE.MeshBasicMaterial({
+            color: 0x88aaff,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.6
+        });
+        const ring1 = new THREE.Mesh(ringGeometry1, ringMaterial1);
+        ring1.rotation.x = Math.PI / 2.5;
+        planet1.add(ring1);
+
+        const planet2Geometry = new THREE.SphereGeometry(3 * planetScale, 32, 32);
+        const planet2Material = new THREE.MeshBasicMaterial({
+            color: 0xff69b4,
+            wireframe: false
+        });
+        const planet2 = new THREE.Mesh(planet2Geometry, planet2Material);
+        planet2.position.set(20, -10, -35);
+        scene.add(planet2);
+
+        // Add ring to planet 2
+        const ringGeometry2 = new THREE.RingGeometry(4 * planetScale, 5.5 * planetScale, 32);
+        const ringMaterial2 = new THREE.MeshBasicMaterial({
+            color: 0xffaacc,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.5
+        });
+        const ring2 = new THREE.Mesh(ringGeometry2, ringMaterial2);
+        ring2.rotation.x = Math.PI / 3;
+        planet2.add(ring2);
+
+        const planet3Geometry = new THREE.SphereGeometry(5 * planetScale, 32, 32);
+        const planet3Material = new THREE.MeshBasicMaterial({
+            color: 0x9370db,
+            wireframe: false
+        });
+        const planet3 = new THREE.Mesh(planet3Geometry, planet3Material);
+        planet3.position.set(0, 15, -50);
+        scene.add(planet3);
+
+        // Add ring to planet 3
+        const ringGeometry3 = new THREE.RingGeometry(6.5 * planetScale, 9 * planetScale, 32);
+        const ringMaterial3 = new THREE.MeshBasicMaterial({
+            color: 0xbb88ff,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.7
+        });
+        const ring3 = new THREE.Mesh(ringGeometry3, ringMaterial3);
+        ring3.rotation.x = Math.PI / 2.2;
+        planet3.add(ring3);
+
+        // Message storage
+        let messages = [];
+
+        // Mood colors
+        const moodColors = {
+            hope: 0x00ffff,
+            love: 0xff00ff,
+            dream: 0xffff00,
+            gratitude: 0x00ff00
+        };
+
+        // DOM Elements
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-text');
+        const countrySelect = document.getElementById('country-select');
+        const sendBtn = document.getElementById('send-btn');
+        const countryFilter = document.getElementById('country-filter');
+        const charCounter = document.getElementById('char-counter');
+        const moodButtons = document.querySelectorAll('.mood-btn');
+        const addWishBtn = document.getElementById('add-wish-btn');
+        const closeBtn = document.querySelector('.close-btn');
+        let selectedMood = 'hope';
+
+        // Character counter
+        messageInput.addEventListener('input', () => {
+            charCounter.textContent = messageInput.value.length;
+        });
+
+        // Close form
+        closeBtn.addEventListener('click', () => {
+            messageForm.classList.add('hidden');
+            addWishBtn.classList.add('visible');
+        });
+
+        // Show form again
+        addWishBtn.addEventListener('click', () => {
+            messageForm.classList.remove('hidden');
+            addWishBtn.classList.remove('visible');
+        });
+
+        moodButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                moodButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedMood = btn.dataset.mood;
+            });
+        });
+
+        // Set default mood
+        document.querySelector('.mood-btn.hope').classList.add('active');
+
+        // Create message in 3D space - MOBILE OPTIMIZED
+        function createMessage(text, mood, country) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            // Responsive canvas size
+            const canvasSize = isMobile ? 1536 : 2048;
+            canvas.width = canvasSize;
+            canvas.height = canvasSize / 2;
+
+            // Transparent background
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            // MOBILE: Bigger, bolder text with stroke for readability
+            const fontSize = isMobile ? 100 : 80;
+            context.font = `bold ${fontSize}px Courier New`;
+            context.fillStyle = `#${moodColors[mood].toString(16).padStart(6, '0')}`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            
+            // Black stroke for contrast (NO RECTANGLE!)
+            context.strokeStyle = '#000';
+            context.lineWidth = isMobile ? 8 : 6;
+            context.lineJoin = 'round';
+            
+            if (typeof text !== 'string') { console.warn('Invalid text:', text); return; }
+            
+            const words = text.split(' ');
+            let line = '';
+            let y = canvas.height / 2 - 60;
+            const lines = [];
+            const maxWidth = isMobile ? canvas.width - 250 : canvas.width - 160;
+            
+            words.forEach((word, i) => {
+                const testLine = line + word + ' ';
+                const metrics = context.measureText(testLine);
+                if (metrics.width > maxWidth && i > 0) {
+                    lines.push({ text: line, y: y });
+                    line = word + ' ';
+                    y += fontSize + 20;
+                } else {
+                    line = testLine;
+                }
+            });
+            lines.push({ text: line, y: y });
+            
+            // Draw with stroke first, then fill
+            lines.forEach(lineObj => {
+                context.strokeText(lineObj.text, canvas.width / 2, lineObj.y);
+                context.fillText(lineObj.text, canvas.width / 2, lineObj.y);
+            });
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            
+            const material = new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true,
+                opacity: 0
+            });
+
+            const sprite = new THREE.Sprite(material);
+            
+            // Mobile: smaller sprites
+            const spriteScale = isMobile ? 0.7 : 1;
+            sprite.scale.set(35 * spriteScale, 17.5 * spriteScale, 1);
+
+            // Position across full screen
+            const angle = Math.random() * Math.PI * 2;
+            const radius = isMobile ? 35 + Math.random() * 15 : 40 + Math.random() * 20;
+            sprite.position.set(
+                Math.cos(angle) * radius,
+                (Math.random() - 0.5) * 30,
+                Math.sin(angle) * radius - 30
+            );
+
+            const messageData = {
+                sprite: sprite,
+                text: text,
+                mood: mood,
+                country: country,
+                angle: angle,
+                radius: radius,
+                verticalSpeed: (Math.random() - 0.5) * 0.02,
+                orbitSpeed: 0.003 + Math.random() * 0.002,
+                id: Date.now() + Math.random(),
+                fadeIn: true,
+                fadeProgress: 0
+            };
+
+            scene.add(sprite);
+            messages.push(messageData);
+
+            return messageData;
+        }
+
+        // Send message - UPDATED WEBHOOK URL
+        sendBtn.addEventListener('click', () => {
+            const text = messageInput.value.trim();
+            const country = countrySelect.value;
+
+            if (!text) {
+                alert('Please write a message!');
+                return;
+            }
+
+            if (!country) {
+                alert('Please select your country!');
+                return;
+            }
+
+            // NEW WEBHOOK URL
+            fetch('https://n8n-production-d2b9.up.railway.app/webhook/save-message1', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, mood: selectedMood, country })
+            })
+            .then(() => {
+                // Reload messages after successful save
+                setTimeout(() => loadMessages(countryFilter.value), 500);
+            })
+            .catch(err => console.error('Failed to save message:', err));
+
+            // Reset form
+            messageInput.value = '';
+            charCounter.textContent = '0';
+            countrySelect.value = '';
+            
+            // Hide form and show button after send
+            messageForm.classList.add('hidden');
+            addWishBtn.classList.add('visible');
+            
+            alert('Your message has been sent to space! ✨');
+        });
+
+        // Load total count from n8n
+        async function loadTotalCount() {
+            try {
+                const url = 'https://n8n-production-d2b9.up.railway.app/webhook/count-messages1';
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data && typeof data.count === 'number') {
+                    return data.count;
+                }
+                return 0;
+            } catch (err) {
+                console.error('Failed to load total count:', err);
+                return 0;
+            }
+        }
+
+        // Load messages from n8n - UPDATED WEBHOOK URL
+        async function loadMessages(country = 'all') {
+            try {
+                const url = `https://n8n-production-d2b9.up.railway.app/webhook/get-messages1?country=${country}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                // Clear existing messages ALWAYS
+                messages.forEach(msg => {
+                    scene.remove(msg.sprite);
+                    if (msg.sprite.material.map) msg.sprite.material.map.dispose();
+                    msg.sprite.material.dispose();
+                });
+                messages = [];
+                
+                // Check if empty response
+                if (!Array.isArray(data)) { 
+                    console.warn('Invalid data:', data); 
+                    updateWishCounter(0, country);
+                    return; 
+                }
+                if (data.length === 0) {
+                    updateWishCounter(0, country);
+                    return;
+                }
+                if (data[0]?.empty === true) {
+                    updateWishCounter(0, country);
+                    return;
+                }
+                
+                // Update counter based on filter
+                if (country === 'all') {
+                    // Load total count from separate endpoint
+                    const totalCount = await loadTotalCount();
+                    updateWishCounter(totalCount, country);
+                } else {
+                    // For filtered countries, use data length
+                    updateWishCounter(data.length, country);
+                }
+                
+                // Create messages from data
+                data.forEach(msg => {
+                    if (msg.Message && msg.Mood && msg.Country) {
+                        createMessage(msg.Message, msg.Mood.toLowerCase(), msg.Country);
+                    }
+                });
+            } catch (err) {
+                console.error('Failed to load messages:', err);
+                updateWishCounter(0, country);
+                // Clear screen even on error
+                messages.forEach(msg => scene.remove(msg.sprite));
+                messages = [];
+            }
+        }
+        
+        // Update wish counter
+        function updateWishCounter(count, country) {
+            const counterEl = document.getElementById('wish-counter');
+            counterEl.textContent = `💫 ${count}`;
+        }
+
+        // Filter messages
+        countryFilter.addEventListener('change', () => {
+            loadMessages(countryFilter.value);
+        });
+
+        // Get or create unique user ID
+        function getUserId() {
+            let userId = localStorage.getItem('wishUserId');
+            if (!userId) {
+                // Generate unique ID
+                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('wishUserId', userId);
+            }
+            return userId;
+        }
+
+        // Get daily prediction
+        async function getDailyPrediction() {
+            try {
+                // FORCE close form immediately
+                const formEl = document.getElementById('message-form');
+                if (formEl && !formEl.classList.contains('hidden')) {
+                    formEl.classList.add('hidden');
+                }
+                
+                const userId = getUserId();
+                const today = new Date().toLocaleDateString('en-CA'); // "2026-01-12"
+                
+                console.log('=== PREDICTION REQUEST ===');
+                console.log('userId:', userId);
+                console.log('date:', today);
+                
+                const response = await fetch('https://n8n-production-d2b9.up.railway.app/webhook/daily-prediction1', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, date: today })
+                });
+                
+                const data = await response.json();
+                
+                console.log('=== PREDICTION RESPONSE ===');
+                console.log('Full response:', data);
+                console.log('error:', data.error, typeof data.error);
+                console.log('message:', data.message);
+                console.log('prediction:', data.prediction);
+                
+                if (data.error) {
+                    // Already got prediction today
+                    showPredictionModal(data.message, true);
+                } else {
+                    // New prediction
+                    showPredictionModal(data.prediction, false);
+                }
+            } catch (err) {
+                console.error('Failed to get prediction:', err);
+                alert('Failed to get your daily prediction. Please try again.');
+            }
+        }
+
+        // Show prediction in modal
+        function showPredictionModal(text, isError) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                padding: 20px;
+                opacity: 0;
+                transition: opacity 0.3s ease, background 0.3s ease;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: rgba(0, 20, 40, 0.95);
+                border: 2px solid ${isError ? '#ff00ff' : '#9370db'};
+                border-radius: 15px;
+                padding: 30px;
+                max-width: 500px;
+                text-align: center;
+                box-shadow: 0 0 30px ${isError ? 'rgba(255, 0, 255, 0.5)' : 'rgba(147, 112, 219, 0.5)'};
+                transform: scale(0.8) translateY(20px);
+                opacity: 0;
+                transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            `;
+            
+            const icon = document.createElement('div');
+            icon.style.cssText = `
+                font-size: 48px; 
+                margin-bottom: 20px;
+                transform: scale(0);
+                transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s;
+            `;
+            icon.textContent = isError ? '⏰' : '🔮';
+            
+            const message = document.createElement('p');
+            message.style.cssText = `
+                color: #fff;
+                font-family: 'Courier New', monospace;
+                font-size: 16px;
+                line-height: 1.6;
+                margin: 0 0 20px 0;
+                opacity: 0;
+                transition: opacity 0.4s ease 0.3s;
+            `;
+            message.textContent = text;
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = 'Close';
+            closeBtn.style.cssText = `
+                padding: 12px 30px;
+                background: linear-gradient(45deg, ${isError ? '#ff00ff' : '#9370db'}, ${isError ? '#ff88ff' : '#bb88ff'});
+                border: none;
+                border-radius: 8px;
+                color: #fff;
+                font-family: 'Courier New', monospace;
+                font-size: 14px;
+                font-weight: bold;
+                cursor: pointer;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                opacity: 0;
+                transform: translateY(10px);
+                transition: all 0.3s ease 0.5s, transform 0.2s ease, box-shadow 0.2s ease;
+            `;
+            
+            closeBtn.addEventListener('mouseenter', () => {
+                closeBtn.style.transform = 'translateY(10px) scale(1.05)';
+                closeBtn.style.boxShadow = `0 5px 20px ${isError ? 'rgba(255, 0, 255, 0.4)' : 'rgba(147, 112, 219, 0.4)'}`;
+            });
+            
+            closeBtn.addEventListener('mouseleave', () => {
+                closeBtn.style.transform = 'translateY(10px) scale(1)';
+                closeBtn.style.boxShadow = 'none';
+            });
+            
+            closeBtn.addEventListener('click', () => {
+                // Reverse animation
+                content.style.transform = 'scale(0.8) translateY(20px)';
+                content.style.opacity = '0';
+                modal.style.opacity = '0';
+                setTimeout(() => modal.remove(), 300);
+            });
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    content.style.transform = 'scale(0.8) translateY(20px)';
+                    content.style.opacity = '0';
+                    modal.style.opacity = '0';
+                    setTimeout(() => modal.remove(), 300);
+                }
+            });
+            
+            content.appendChild(icon);
+            content.appendChild(message);
+            content.appendChild(closeBtn);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            // Trigger animations with slight delay
+            setTimeout(() => {
+                modal.style.opacity = '1';
+                modal.style.background = 'rgba(0, 0, 0, 0.8)';
+                content.style.transform = 'scale(1) translateY(0)';
+                content.style.opacity = '1';
+                icon.style.transform = 'scale(1)';
+                message.style.opacity = '1';
+                closeBtn.style.opacity = '1';
+                closeBtn.style.transform = 'translateY(0)';
+            }, 10);
+        }
+
+        // Prediction button (заглушка - подключишь n8n позже)
+        document.getElementById('prediction-btn').addEventListener('click', () => {
+            getDailyPrediction();
+        });
+
+        // Mouse interaction
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let tooltip = null;
+
+        renderer.domElement.addEventListener('mousemove', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(messages.map(m => m.sprite));
+
+            if (tooltip) {
+                tooltip.remove();
+                tooltip = null;
+            }
+
+            if (intersects.length > 0) {
+                const messageData = messages.find(m => m.sprite === intersects[0].object);
+                if (messageData) {
+                    tooltip = document.createElement('div');
+                    tooltip.className = 'message-tooltip';
+                    tooltip.style.borderColor = `#${moodColors[messageData.mood].toString(16).padStart(6, '0')}`;
+                    tooltip.style.left = event.clientX + 10 + 'px';
+                    tooltip.style.top = event.clientY + 10 + 'px';
+                    tooltip.innerHTML = `
+                        <strong style="color: #${moodColors[messageData.mood].toString(16).padStart(6, '0')}">${messageData.mood.toUpperCase()}</strong><br>
+                        "${messageData.text}"<br>
+                        <small style="color: #00ffff">from ${messageData.country}</small>
+                    `;
+                    document.body.appendChild(tooltip);
+                }
+            }
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Rotate stars slowly
+            stars.rotation.y += 0.0002;
+
+            // Rotate planets
+            planet1.rotation.y += 0.005;
+            planet2.rotation.y += 0.008;
+            planet3.rotation.y += 0.003;
+
+            // Update messages
+            messages.forEach(msg => {
+                // Fade in animation for new messages
+                if (msg.fadeIn && msg.fadeProgress < 1) {
+                    msg.fadeProgress += 0.02;
+                    msg.sprite.material.opacity = msg.fadeProgress;
+                    if (msg.fadeProgress >= 1) {
+                        msg.fadeIn = false;
+                        msg.sprite.material.opacity = 1;
+                    }
+                }
+
+                // Orbital movement
+                msg.angle += msg.orbitSpeed;
+                msg.sprite.position.x = Math.cos(msg.angle) * msg.radius;
+                msg.sprite.position.z = Math.sin(msg.angle) * msg.radius - 30;
+                msg.sprite.position.y += msg.verticalSpeed;
+
+                // Keep vertical position in bounds
+                if (msg.sprite.position.y > 20) msg.verticalSpeed = -Math.abs(msg.verticalSpeed);
+                if (msg.sprite.position.y < -20) msg.verticalSpeed = Math.abs(msg.verticalSpeed);
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Load messages on page load
+        loadMessages('all');
+
+        animate();
+    </script>
+</body>
+</html>
