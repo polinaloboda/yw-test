@@ -910,24 +910,35 @@
             
             if (typeof text !== 'string') { console.warn('Invalid text:', text); return; }
             
+            // First pass: calculate all lines
             const words = text.split(' ');
             let line = '';
-            let y = canvas.height / 2 - 60;
-            const lines = [];
+            const tempLines = [];
             const maxWidth = isMobile ? canvas.width - 400 : canvas.width - 160;
             
             words.forEach((word, i) => {
                 const testLine = line + word + ' ';
                 const metrics = context.measureText(testLine);
                 if (metrics.width > maxWidth && i > 0) {
-                    lines.push({ text: line, y: y });
+                    tempLines.push(line);
                     line = word + ' ';
-                    y += fontSize + 20;
                 } else {
                     line = testLine;
                 }
             });
-            lines.push({ text: line, y: y });
+            tempLines.push(line);
+            
+            // Calculate total height and starting Y to center vertically
+            const lineHeight = fontSize + 20;
+            const totalHeight = tempLines.length * lineHeight;
+            let y = (canvas.height - totalHeight) / 2 + fontSize / 2;
+            
+            // Second pass: create lines with correct Y positions
+            const lines = tempLines.map(lineText => {
+                const lineObj = { text: lineText, y: y };
+                y += lineHeight;
+                return lineObj;
+            });
             
             // Draw with stroke first, then fill
             lines.forEach(lineObj => {
